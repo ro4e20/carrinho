@@ -1,0 +1,195 @@
+Programação de um código no Arduino IDE para fazer um servomotor girar até um ângulo escolhido. Utilização do servomotor para rotacionar um sensor ultrassônico em um carrinho programado para tomar decisões autonomamente. 
+
+
+Materiais utilizados
+1 computador com o software Arduino IDE instalado
+1 arduino Uno com cabo USB
+1 Driver Ponte H L298N
+1 Kit Chassi 2WD (com 2 motores CC, 2 rodas e 1 roda boba)
+1 suporte para 4 pilhas AA
+4 pilhas AA
+1 clip para conector de bateria de 9 V
+1 bateria de 9 V
+2 chaves alavanca (ou 2 interruptores)
+1 sensor ultrassônico HC-SR04
+1 servomotor 9g SG90 Micro Servo
+10 jumpers
+1 pistola de cola quente
+
+
+
+
+Aula expositiva (20 min) 
+Esta é a 4ª atividade de aprimoramento do carrinho robô.
+
+Para encontrar mais detalhes a respeito da montagem do chassi do carrinho utilizando o driver Ponte H, consulte o roteiro de atividade: Carrinho com movimento programado. 
+
+Para encontrar mais detalhes a respeito do uso do módulo de bluetooth, consulte o roteiro de atividade: Carrinho com controle remoto.
+
+Para encontrar mais detalhes a respeito do uso do sensor ultrassônico, consulte o roteiro de atividade: Carrinho com controle autônomo.
+
+O servomotor 9g SG90 Micro Servo opera com a voltagem de 3 a 7 volts e pode variar a angulação de zero a 180°. Os seus três fios devem ser conectados nos pinos do arduino:
+Gnd (fio marrom ou preto);
+5 volts (fio vermelho);
+porta digital PWM (fio laranja ou amarelo).
+
+O sensor ultrassônico HC-SR04 pode ser fixado sobre o servomotor utilizando cola quente.
+
+
+Atividade direcionada (30 min), criativa (30 min) e exposição de trabalhos (10 min)
+A proposta é utilizar a Porta Serial digitando os números de 1 a 5 para controlar o servomotor para girar até os ângulos: 0, 45, 90, 135 e 180°. Inicialmente será necessário incluir a biblioteca Servo.h que já está disponível no Arduino IDE. 
+
+Digite este sketch no Arduino IDE e envie para o arduino do carrinho:
+
+
+#include <Servo.h>      // inclusão da biblioteca Servo.h
+
+Servo servo;                // criação de um objeto chamado servo
+
+int SERVO = 11;
+char entrada;       // variável para armazenar os caracteres digitados
+
+void setup( ) {
+  servo.attach(SERVO);    // associa o objeto ao pino digital 11
+  Serial.begin(9600);
+}
+
+void loop( ) {
+  if (Serial.available( ) > 0) {
+    entrada = Serial.read( );         // faz a leitura da Porta Serial
+
+    switch(entrada) {
+
+      case '1':
+      servo.write(0); 
+      break;
+
+      case '2':
+      servo.write(45); 
+      break;
+
+      case '3':
+      servo.write(90); 
+      break;
+
+      case '4':
+      servo.write(135); 
+      break;
+
+      case '5':
+      servo.write(180); 
+      break;
+    }
+  }
+}
+
+
+
+Exercício. Utilize um servomotor para controlar algum tipo de movimento de outro projeto, por exemplo: leme de um barco, asa de um avião, abertura de tampas, portas ou janelas pequenas. 
+
+Desafio. Faça a inclusão do servomotor para controlar a direção (30, 90 e 150°) para onde aponta o sensor ultrassônico do carrinho autônomo com a finalidade de medir as distâncias até os obstáculos e fazer o arduino tomar a decisão pelo trajeto mais livre.
+
+
+Possível solução do desafio: 
+
+#include <Servo.h>
+Servo servo;
+
+int SERVO = 11; // servomotor ligado em uma porta digital PWM
+int MET = 10;      // motor da esquerda para trás 
+int MEF = 9;        // motor da esquerda para frente
+int MDF = 6;        // motor da direita para frente
+int MDT = 5;        // motor da direita para trás
+int POT = 255;     // potência do motor de 0 a 255
+int TRIG = 8;        // essa porta envia um sinal para o sensor ultrassônico
+int ECO = 7;         // essa porta recebe um sinal do sensor ultrassônico
+int tempo;             // duração do sinal enviado do sensor ultrassônico
+int F, E, D;            // distâncias medidas da frente (90°), da direita (30°) e esquerda (150°)
+
+void setup( ) {
+  pinMode(MEF, OUTPUT);
+  pinMode(MET, OUTPUT);
+  pinMode(MDF, OUTPUT);
+  pinMode(MDT, OUTPUT);
+  pinMode(ECO, INPUT);
+  pinMode(TRIG, OUTPUT);
+  digitalWrite(TRIG, LOW);
+  servo.attach(SERVO);   // associa o objeto ao pino digital 11
+  servo.write(90);             // inicia olhando para frente (ângulo de 90°)
+  delay(2000);
+}
+  
+void loop( ) {
+  analogWrite(MDF, 0);    // inicia com os motores parados
+  analogWrite(MEF, 0);   
+  analogWrite(MDT, 0);
+  analogWrite(MET, 0); 
+
+  servo.write(30);          // gira para direita (ângulo de 30°)
+  delay(1500);
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG, LOW);
+  tempo = pulseIn(ECO, HIGH);
+  D = tempo/58;          // calcula a distância a partir do tempo de ida e volta do ultrassom com v = 345 m/s
+
+  servo.write(150);       // gira para esquerda (ângulo de 150°)
+  delay(1500);
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG, LOW);
+  tempo = pulseIn(ECO, HIGH);
+  E = tempo/58;  
+
+  servo.write(90);       // gira para frente (ângulo de 90°)
+  delay(1500);
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG, LOW);
+  tempo = pulseIn(ECO, HIGH);
+  F = tempo/58;  
+
+  if (F > 30) {                                  
+    if ((D > 20) && (E > 20)) {         // o carrinho vai para frente desde que a distância ao obstáculo for maior que 30 cm
+      analogWrite(MDF, POT);
+      analogWrite(MEF, POT);   
+      analogWrite(MDT, 0);
+      analogWrite(MET, 0); 
+      delay (1500);
+    }
+    
+    else {
+      if (D > E) {                              // o carrinho gira para a direita
+        analogWrite(MDF, 0);
+        analogWrite(MEF, POT);   
+        analogWrite(MDT, POT);
+        analogWrite(MET, 0); 
+        delay (500);
+      }
+
+      else {                                       // o carrinho gira para a esquerda
+        analogWrite(MDF, POT);
+        analogWrite(MEF, 0);   
+        analogWrite(MDT, 0);
+        analogWrite(MET, POT); 
+        delay (500);
+      }
+    }
+  }
+    
+  else {                               // se a distância for menor do que 30 cm, então ele dá ré e gira 
+    analogWrite(MDF, 0);
+    analogWrite(MEF, 0);   
+    analogWrite(MDT, POT);
+    analogWrite(MET, POT);
+    delay (500);
+    analogWrite(MDF, POT);
+    analogWrite(MEF, 0);   
+    analogWrite(MDT, 0);
+    analogWrite(MET, POT);
+    delay (750);
+  } 
+}
+
+Caso note algum problema com o servomotor, sugere-se não utilizar as portas digitais 9 e 10 do arduino Uno ou as portas digitais 11 e 12 do arduino MEGA. Substitua o uso delas por portas analógicas, pois elas também podem ser usadas como saídas analógicas PWM. Este conflito pode ocorrer com a biblioteca Servo.h causando interferência quando essas portas são utilizadas com a função analogWrite( ). Veja mais detalhes neste documento de referência do arduino.
+
